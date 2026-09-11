@@ -12,9 +12,11 @@ Endpoints:
 
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from datetime import datetime
 
 app = Flask(__name__)
+CORS(app)  # allows requests from ANY frontend domain — fine for a student project/demo
 
 # ---------- DATABASE CONFIG ----------
 # SQLite for local development: creates a single file "ivemps.db" in this folder.
