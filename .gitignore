@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Database files (local dev only, never commit)
+*.db
+ivemps.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node (for frontend, coming up next)
+node_modules/
+.next/
