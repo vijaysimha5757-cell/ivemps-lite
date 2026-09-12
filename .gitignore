@@ -7,6 +7,7 @@ venv/
 # Database files (local dev only, never commit)
 *.db
 ivemps.db
+instance/
 
 # OS files
 .DS_Store

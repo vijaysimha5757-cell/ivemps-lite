@@ -8,7 +8,7 @@ import requests
 import random
 import time
 
-URL = "http://127.0.0.1:5000/readings"
+URL = "https://ivemps-lite-backend.onrender.com/readings"
 
 def fake_safety_rating(co2, co, smoke):
     # Very rough placeholder logic — real fuzzy logic comes in Week 2
