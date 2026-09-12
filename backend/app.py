@@ -22,7 +22,9 @@ CORS(app)  # allows requests from ANY frontend domain — fine for a student pro
 # SQLite for local development: creates a single file "ivemps.db" in this folder.
 # Later, to move to PostgreSQL (cloud), we ONLY change this one line —
 # nothing else in the code changes. That's the benefit of using an ORM (SQLAlchemy).
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ivemps.db'
+import os
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///ivemps.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
