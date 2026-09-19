@@ -14,9 +14,24 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from datetime import datetime
+import os
+import numpy as np
+import joblib
 
 app = Flask(__name__)
 CORS(app)  # allows requests from ANY frontend domain — fine for a student project/demo
+
+# ---------- LOAD THE TRAINED FORECASTING MODEL ----------
+# This file must sit in the same folder as app.py (copy it here after training).
+W = 10  # must match the window size used during training
+LABEL_NAMES = ["Safe", "Warning", "Danger"]  # index 0,1,2 - must match training's LABEL_MAP order
+
+try:
+    forecast_model = joblib.load("safety_forecast_model.pkl")
+    print("Forecasting model loaded successfully.")
+except FileNotFoundError:
+    forecast_model = None
+    print("WARNING: safety_forecast_model.pkl not found - /forecast will return a placeholder.")
 
 # ---------- DATABASE CONFIG ----------
 # SQLite for local development: creates a single file "ivemps.db" in this folder.
@@ -105,14 +120,45 @@ def get_all_readings():
 @app.route('/forecast', methods=['GET'])
 def get_forecast():
     """
-    Placeholder for now — Week 3 we'll plug in the trained ML model here.
-    Returning a dummy response so the frontend can already be built against
-    this endpoint without waiting for the model to exist.
+    Uses the last W real readings to predict the safety rating H steps
+    (15 seconds, since H=5 and readings come in every ~3 sec) into the future.
     """
+    if forecast_model is None:
+        return jsonify({
+            "message": "Forecast model not loaded on server",
+            "predicted_safety_rating": "Unknown"
+        }), 503
+
+    # Get the most recent W readings, in chronological order (oldest of the window first)
+    recent = Reading.query.order_by(Reading.id.desc()).limit(W).all()
+    recent = list(reversed(recent))  # put back in chronological order
+
+    if len(recent) < W:
+        return jsonify({
+            "message": f"Not enough data yet — need {W} readings, have {len(recent)}",
+            "predicted_safety_rating": "Unknown"
+        }), 200
+
+    # Build the same flattened window shape the model was trained on:
+    # [co2_1, co_1, smoke_1, co2_2, co_2, smoke_2, ..., co2_W, co_W, smoke_W]
+    window = []
+    for r in recent:
+        window.extend([r.co2_ppm, r.co_ppm, r.smoke_ppm])
+
+    window = np.array(window).reshape(1, -1)  # model expects a 2D array: 1 row, many columns
+
+    predicted_class = forecast_model.predict(window)[0]
+    predicted_label = LABEL_NAMES[predicted_class]
+
+    # Also get prediction confidence (how sure the model is), nice to show on the dashboard
+    probabilities = forecast_model.predict_proba(window)[0]
+    confidence = float(np.max(probabilities))
+
     return jsonify({
-        "message": "Forecast model not trained yet — placeholder response",
-        "predicted_co2_ppm": None,
-        "predicted_safety_rating": "Unknown"
+        "predicted_safety_rating": predicted_label,
+        "confidence": round(confidence, 2),
+        "horizon_seconds": 15,
+        "based_on_readings": len(recent)
     })
 
 
