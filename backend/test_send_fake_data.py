@@ -19,7 +19,7 @@ def fake_safety_rating(co2, co, smoke):
     else:
         return "Safe"
 
-for i in range(5):
+for i in range(15):
     co2 = round(random.uniform(400, 1500), 1)
     co = round(random.uniform(1, 60), 1)
     smoke = round(random.uniform(10, 400), 1)
@@ -33,7 +33,10 @@ for i in range(5):
     }
 
     response = requests.post(URL, json=payload)
-    print(f"Sent: {payload}  |  Server responded: {response.status_code} {response.json()}")
+    print(f"Sent: {payload}")
+    print(f"Status code: {response.status_code}")
+    print(f"Raw response text: {response.text[:500]}")  # first 500 chars, in case it's a big HTML error page
+    print("-" * 40)
 
     time.sleep(2)
 

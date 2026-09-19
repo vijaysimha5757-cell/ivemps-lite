@@ -9,6 +9,7 @@ const BACKEND_URL = 'https://ivemps-lite-backend.onrender.com';
 export default function Dashboard() {
   const [latest, setLatest] = useState(null);
   const [history, setHistory] = useState([]);
+  const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(true);
 
   async function fetchData() {
@@ -20,6 +21,10 @@ export default function Dashboard() {
       const historyRes = await fetch(`${BACKEND_URL}/readings`);
       const historyData = await historyRes.json();
       setHistory(historyData);
+
+      const forecastRes = await fetch(`${BACKEND_URL}/forecast`);
+      const forecastData = await forecastRes.json();
+      setForecast(forecastData);
 
       setLoading(false);
     } catch (err) {
@@ -94,6 +99,20 @@ export default function Dashboard() {
           <p className="text-3xl font-extrabold text-white mt-3">{rc.label}</p>
         </div>
       </div>
+
+      {/* --- Forecast card --- */}
+      {forecast && forecast.predicted_safety_rating && forecast.predicted_safety_rating !== 'Unknown' && (
+        <div className={`rounded-2xl p-5 mb-8 bg-gradient-to-r ${ratingConfig(forecast.predicted_safety_rating).bg} shadow-lg flex items-center justify-between`}>
+          <div>
+            <p className="text-white/90 text-sm font-medium">Predicted in {forecast.horizon_seconds ?? 15} seconds</p>
+            <p className="text-2xl font-extrabold text-white mt-1">{forecast.predicted_safety_rating}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-white/80 text-xs">Model confidence</p>
+            <p className="text-xl font-bold text-white">{Math.round((forecast.confidence ?? 0) * 100)}%</p>
+          </div>
+        </div>
+      )}
 
       {/* --- Chart --- */}
       <div className="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-6 shadow-xl">

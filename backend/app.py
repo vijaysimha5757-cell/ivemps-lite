@@ -29,9 +29,9 @@ LABEL_NAMES = ["Safe", "Warning", "Danger"]  # index 0,1,2 - must match training
 try:
     forecast_model = joblib.load("safety_forecast_model.pkl")
     print("Forecasting model loaded successfully.")
-except FileNotFoundError:
+except Exception as e:
     forecast_model = None
-    print("WARNING: safety_forecast_model.pkl not found - /forecast will return a placeholder.")
+    print(f"WARNING: could not load safety_forecast_model.pkl ({e}) - /forecast will return a placeholder.")
 
 # ---------- DATABASE CONFIG ----------
 # SQLite for local development: creates a single file "ivemps.db" in this folder.
