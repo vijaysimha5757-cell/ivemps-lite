@@ -47,18 +47,24 @@ def send_danger_alert(reading):
     if last_alert_time and (now - last_alert_time) < timedelta(minutes=ALERT_COOLDOWN_MINUTES):
         return  # still in cooldown, skip to avoid spamming
 
+    # Convert stored UTC timestamp to IST (UTC+5:30) for display
+    ist_time = reading.timestamp + timedelta(hours=5, minutes=30)
+
     message_text = (
-        f"⚠️ IVEMPS-Lite Alert: DANGER emission levels detected.\n"
-        f"CO2: {reading.co2_ppm} ppm | CO: {reading.co_ppm} ppm | "
-        f"Smoke/HC: {reading.smoke_ppm} ppm\n"
-        f"Time: {reading.timestamp.strftime('%Y-%m-%d %H:%M:%S')} UTC"
+        f"🚨 <b>IVEMPS-Lite ALERT</b> 🚨\n"
+        f"<b>DANGER</b> emission levels detected!\n\n"
+        f"🫧 <b>CO2:</b> {reading.co2_ppm} ppm\n"
+        f"🔥 <b>CO:</b> {reading.co_ppm} ppm\n"
+        f"💨 <b>Smoke/HC:</b> {reading.smoke_ppm} ppm\n\n"
+        f"🕒 {ist_time.strftime('%d %b %Y, %I:%M:%S %p')} IST"
     )
 
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         response = http_requests.post(url, json={
             "chat_id": TELEGRAM_CHAT_ID,
-            "text": message_text
+            "text": message_text,
+            "parse_mode": "HTML"
         })
         if response.status_code == 200:
             last_alert_time = now
