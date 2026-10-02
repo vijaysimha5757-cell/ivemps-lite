@@ -13,13 +13,57 @@ Endpoints:
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import numpy as np
 import joblib
+from twilio.rest import Client
 
 app = Flask(__name__)
 CORS(app)  # allows requests from ANY frontend domain — fine for a student project/demo
+
+# ---------- TWILIO WHATSAPP ALERTS ----------
+TWILIO_SID = os.environ.get('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH = os.environ.get('TWILIO_AUTH_TOKEN')
+TWILIO_WHATSAPP_FROM = os.environ.get('TWILIO_WHATSAPP_FROM')  # e.g. whatsapp:+14155238886
+ALERT_WHATSAPP_TO = os.environ.get('ALERT_WHATSAPP_TO')        # e.g. whatsapp:+91XXXXXXXXXX
+
+twilio_client = None
+if TWILIO_SID and TWILIO_AUTH:
+    twilio_client = Client(TWILIO_SID, TWILIO_AUTH)
+    print("Twilio client initialized.")
+else:
+    print("WARNING: Twilio credentials not set — WhatsApp alerts disabled.")
+
+# Cooldown so we don't spam WhatsApp with a message every single reading
+# while emissions stay in Danger for an extended period.
+last_alert_time = None
+ALERT_COOLDOWN_MINUTES = 5
+
+def send_danger_alert(reading):
+    global last_alert_time
+    if twilio_client is None:
+        return  # Twilio not configured, silently skip
+
+    now = datetime.utcnow()
+    if last_alert_time and (now - last_alert_time) < timedelta(minutes=ALERT_COOLDOWN_MINUTES):
+        return  # still in cooldown, skip to avoid spamming
+
+    try:
+        message = twilio_client.messages.create(
+            from_=TWILIO_WHATSAPP_FROM,
+            to=ALERT_WHATSAPP_TO,
+            body=(
+                f"⚠️ IVEMPS-Lite Alert: DANGER emission levels detected.\n"
+                f"CO2: {reading.co2_ppm} ppm | CO: {reading.co_ppm} ppm | "
+                f"Smoke/HC: {reading.smoke_ppm} ppm\n"
+                f"Time: {reading.timestamp.strftime('%Y-%m-%d %H:%M:%S')} UTC"
+            )
+        )
+        last_alert_time = now
+        print(f"WhatsApp alert sent: {message.sid}")
+    except Exception as e:
+        print(f"Failed to send WhatsApp alert: {e}")
 
 # ---------- LOAD THE TRAINED FORECASTING MODEL ----------
 # This file must sit in the same folder as app.py (copy it here after training).
@@ -97,6 +141,9 @@ def add_reading():
     )
     db.session.add(new_reading)
     db.session.commit()
+
+    if new_reading.safety_rating == "Danger":
+        send_danger_alert(new_reading)
 
     return jsonify({"message": "Reading saved", "data": new_reading.to_dict()}), 201
 
