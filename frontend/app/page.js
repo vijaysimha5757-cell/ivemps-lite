@@ -38,7 +38,9 @@ function ago(ms) {
   if (s < 60) return `${s}s ago`;
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m ago`;
-  return `${Math.floor(m / 60)}h ago`;
+  const h = Math.floor(m / 60);
+  if (h < 48) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 }
 async function getJson(path) {
   const ctrl = new AbortController();
@@ -111,7 +113,7 @@ export default function Dashboard() {
   const deviceAge = latest?.timestamp ? now - parseTs(latest.timestamp).getTime() : null;
   const deviceStale = deviceAge !== null && deviceAge > 90000;
 
-  const chartData = history.slice(-120).map((r) => ({ ...r, t: istClock(r.timestamp) }));
+  const chartData = history.slice(-120).map((r) => ({ ...r, t: istClock(r.timestamp), full: istFull(r.timestamp) }));
   const spark = history.slice(-30);
   const dangerEvents = history.filter((r) => r.safety_rating === 'Danger').slice(-6).reverse();
 
@@ -156,7 +158,7 @@ export default function Dashboard() {
       )}
       {conn === 'live' && deviceStale && (
         <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-center gap-2">
-          <Clock size={16} /> No new reading from the device for {ago(deviceAge)}. Check that the ESP32 is powered and on WiFi.
+          <Clock size={16} /> Last reading from the device was {ago(deviceAge)} ({istFull(latest.timestamp)} IST). Check that the ESP32 is powered and on WiFi.
         </div>
       )}
 
@@ -203,7 +205,7 @@ export default function Dashboard() {
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
             <XAxis dataKey="t" stroke="#64748b" tick={{ fontSize: 11 }} minTickGap={50} />
             <YAxis stroke="#94a3b8" />
-            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 8 }} labelStyle={{ color: '#94a3b8' }} />
+            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 8 }} labelStyle={{ color: '#94a3b8' }} labelFormatter={(label, payload) => payload?.[0]?.payload?.full ?? label} />
             <Legend />
             <Line type="monotone" dataKey="co2_ppm" stroke="#38bdf8" name="CO2 (ppm)" dot={false} strokeWidth={2} isAnimationActive={false} />
             <Line type="monotone" dataKey="co_ppm" stroke="#fb7185" name="CO (ppm)" dot={false} strokeWidth={2} isAnimationActive={false} />
