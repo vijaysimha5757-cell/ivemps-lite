@@ -8,12 +8,11 @@ const BACKEND_URL = 'https://ivemps-lite-backend.onrender.com';
 const REFRESH_MS = 5000;
 const FETCH_TIMEOUT_MS = 60000; // Render free tier can take ~50s to wake up
 
-// TODO: after re-running train_forecast_model.py (3-feature version that is
-// actually deployed), replace these with the numbers it prints.
+// Results of the deployed 3-gas-input model (train_forecast_model.py, 70/30 chronological split).
 const MODEL_RESULTS = {
-  accuracy: 68,
-  f1: 0.69,
-  dangerF1: 0.81,
+  accuracy: 66.6,
+  f1: 0.68,
+  dangerF1: 0.80,
 };
 const PAPER_RESULTS = { accuracy: 83.3, f1: 0.79, dangerF1: 0.70 };
 
