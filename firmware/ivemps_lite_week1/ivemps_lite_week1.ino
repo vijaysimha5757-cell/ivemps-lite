@@ -29,7 +29,16 @@ const char* WIFI_PASSWORD = "vijay 7890";
 const char* BACKEND_URL = "https://ivemps-lite-backend.onrender.com/readings";
 
 unsigned long lastUpload = 0;
-const unsigned long UPLOAD_INTERVAL = 5000; // send to cloud every 5 sec (doesn't have to match the 3 sec sensor read)
+const unsigned long UPLOAD_INTERVAL = 3000; // send to cloud every 5 sec (doesn't have to match the 3 sec sensor read)
+
+// ---------- LED + BUTTON CONFIG ----------
+const int PIN_LED_GREEN = 18;  // free GPIO, safe to use for output
+const int PIN_LED_RED   = 4;   // free GPIO, safe to use for output
+const int PIN_BUTTON    = 27;  // free GPIO, we'll use its internal pull-up resistor
+
+bool blinkState = false;
+unsigned long lastBlink = 0;
+const unsigned long BLINK_INTERVAL = 500; // half a second on, half a second off
 
 // ---------- OLED CONFIG ----------
 #define SCREEN_WIDTH 128
@@ -51,9 +60,9 @@ const float RL_MQ2   = 5.0;
 // ---------- CALIBRATION CONSTANTS ----------
 // TODO: Fill these in after Day 4-5 calibration in clean air.
 // Ro = Rs measured in clean air / (Rs/Ro ratio in clean air from datasheet)
-float Ro_MQ135 = 889.40;  // calibrated 23 Sept, avg of 3 consistent runs
-float Ro_MQ7   = 1.33;    // calibrated 23 Sept, avg of 3 consistent runs
-float Ro_MQ2   = 0.62;    // calibrated 23 Sept, avg of 3 consistent runs
+float Ro_MQ135 = 272.15;  // calibrated 23 Sept, avg of 3 consistent runs
+float Ro_MQ7   = 0.65;    // calibrated 23 Sept, avg of 3 consistent runs
+float Ro_MQ2   = 1.89;    // calibrated 23 Sept, avg of 3 consistent runs
 
 // Datasheet curve constants for ppm = a * (Rs/Ro)^b  (log-log linear approx)
 // These are typical published values — refine after your own calibration if needed.
@@ -205,6 +214,14 @@ void setup() {
   Serial.begin(115200);
   analogReadResolution(12); // 0-4095
 
+  pinMode(PIN_LED_GREEN, OUTPUT);
+  pinMode(PIN_LED_RED, OUTPUT);
+  // INPUT_PULLUP means the pin reads HIGH normally, and goes LOW only when
+  // the button is physically pressed (connecting the pin to GND). This way
+  // we don't need an external resistor for the button - the ESP32 has one
+  // built in that we're just switching on.
+  pinMode(PIN_BUTTON, INPUT_PULLUP);
+
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println("OLED not found!");
   }
@@ -267,5 +284,37 @@ void loop() {
     display.print("Smoke:"); display.println(ewma_Smoke, 0);
     display.print("Status: "); display.println(safetyRating);
     display.display();
+
+    updateLEDs(safetyRating);
+  }
+
+  // ---------- PUSH BUTTON: force an immediate reading + upload ----------
+  // Checked every loop (not on the 3-sec timer) so it feels instantly
+  // responsive when pressed during a demo.
+  if (digitalRead(PIN_BUTTON) == LOW) {   // LOW = pressed, because of INPUT_PULLUP
+    Serial.println("Button pressed - forcing immediate reading + upload.");
+    lastRead = 0;   // tricks the timer into triggering a sensor read right now
+    lastUpload = 0; // same for the upload timer
+    delay(300);     // simple debounce - ignores accidental extra presses for 300ms
+  }
+}
+
+// Updates the two status LEDs based on the current safety rating.
+// Safe = solid green. Danger = solid red. Warning = alternating blink,
+// which naturally draws the eye - useful during a live demo.
+void updateLEDs(String safety) {
+  if (safety == "Safe") {
+    digitalWrite(PIN_LED_GREEN, HIGH);
+    digitalWrite(PIN_LED_RED, LOW);
+  } else if (safety == "Danger") {
+    digitalWrite(PIN_LED_GREEN, LOW);
+    digitalWrite(PIN_LED_RED, HIGH);
+  } else { // Warning - blink alternately
+    if (millis() - lastBlink >= BLINK_INTERVAL) {
+      lastBlink = millis();
+      blinkState = !blinkState;
+      digitalWrite(PIN_LED_GREEN, blinkState);
+      digitalWrite(PIN_LED_RED, !blinkState);
+    }
   }
 }
