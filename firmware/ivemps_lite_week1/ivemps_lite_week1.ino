@@ -24,12 +24,12 @@
 struct FuzzyDegrees { float low, medium, high; };
 
 // ---------- WIFI + BACKEND CONFIG ----------
-const char* WIFI_SSID = "vivo 1723";      // fill in before testing
-const char* WIFI_PASSWORD = "vijay 7890";
+const char* WIFI_SSID = "Redmi 15 5G";      // fill in before testing
+const char* WIFI_PASSWORD = "simha2287";
 const char* BACKEND_URL = "https://ivemps-lite-backend.onrender.com/readings";
 
 unsigned long lastUpload = 0;
-const unsigned long UPLOAD_INTERVAL = 3000; // send to cloud every 5 sec (doesn't have to match the 3 sec sensor read)
+const unsigned long UPLOAD_INTERVAL = 2000; // send to cloud every 5 sec (doesn't have to match the 3 sec sensor read)
 
 // ---------- LED + BUTTON CONFIG ----------
 const int PIN_LED_GREEN = 18;  // free GPIO, safe to use for output
@@ -60,9 +60,9 @@ const float RL_MQ2   = 5.0;
 // ---------- CALIBRATION CONSTANTS ----------
 // TODO: Fill these in after Day 4-5 calibration in clean air.
 // Ro = Rs measured in clean air / (Rs/Ro ratio in clean air from datasheet)
-float Ro_MQ135 = 272.15;  // calibrated 23 Sept, avg of 3 consistent runs
-float Ro_MQ7   = 0.65;    // calibrated 23 Sept, avg of 3 consistent runs
-float Ro_MQ2   = 1.89;    // calibrated 23 Sept, avg of 3 consistent runs
+float Ro_MQ135 = 104.08;  // calibrated 23 Sept, avg of 3 consistent runs
+float Ro_MQ7   = 0.58;    // calibrated 23 Sept, avg of 3 consistent runs
+float Ro_MQ2   = 0.79;    // calibrated 23 Sept, avg of 3 consistent runs
 
 // Datasheet curve constants for ppm = a * (Rs/Ro)^b  (log-log linear approx)
 // These are typical published values — refine after your own calibration if needed.
@@ -89,7 +89,9 @@ float readRs(int pin, float RL) {
 float rsToPpm(float rs, float ro, float a, float b) {
   float ratio = rs / ro;
   if (ratio <= 0) ratio = 0.01;
-  return a * pow(ratio, b);
+  float ppm = a * pow(ratio, b);
+  if (ppm > 10000.0) ppm = 10000.0;
+  return ppm;
 }
 
 // ---------- FUZZY LOGIC ----------

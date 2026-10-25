@@ -8,13 +8,13 @@ const BACKEND_URL = 'https://ivemps-lite-backend.onrender.com';
 const REFRESH_MS = 5000;
 const FETCH_TIMEOUT_MS = 60000; // Render free tier can take ~50s to wake up
 
-// Results of the deployed 3-gas-input model (train_forecast_model.py, 70/30 chronological split).
-const MODEL_RESULTS = {
-  accuracy: 66.6,
-  f1: 0.68,
-  dangerF1: 0.80,
-};
-const PAPER_RESULTS = { accuracy: 83.3, f1: 0.79, dangerF1: 0.70 };
+// Offline evaluation of the live forecaster on one hour of real device data
+// (902 windows; only 8 Warning and 3 Danger episodes, so indicative rather than conclusive).
+const FORECAST_EVAL = [
+  { method: 'Always say Safe', accuracy: '87.5%', dangerF1: '0.00' },
+  { method: 'Assume nothing changes', accuracy: '92.0%', dangerF1: '0.75' },
+  { method: 'Trend extrapolation + fuzzy rules (live)', accuracy: '94.2%', dangerF1: '0.75' },
+];
 
 // ---------- helpers ----------
 // Backend stores naive UTC timestamps (no "Z"), so add it before parsing.
@@ -190,10 +190,14 @@ export default function Dashboard() {
         {forecast?.predicted_safety_rating && forecast.predicted_safety_rating !== 'Unknown' ? (
           <div className="flex items-end justify-between">
             <p className="text-3xl font-extrabold">{forecast.predicted_safety_rating}</p>
-            <p className="text-slate-400 text-sm">Model confidence {Math.round((forecast.confidence ?? 0) * 100)}%</p>
+            <p className="text-slate-400 text-sm text-right">
+              {forecast.projected
+                ? `Projected: CO2 ${forecast.projected.co2_ppm} · CO ${forecast.projected.co_ppm} · Smoke ${forecast.projected.smoke_ppm} ppm`
+                : ''}
+            </p>
           </div>
         ) : (
-          <p className="text-slate-400 text-sm">{forecast?.message ?? 'The forecast appears once at least 10 readings have been received.'}</p>
+          <p className="text-slate-400 text-sm">{forecast?.message ?? 'The forecast appears once at least 4 readings have been received.'}</p>
         )}
       </div>
 
@@ -250,7 +254,7 @@ export default function Dashboard() {
       <div className="bg-slate-800/60 border border-slate-700 rounded-2xl p-5 mb-6">
         <h2 className="font-semibold mb-3">How it works</h2>
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          {['MQ135 · MQ7 · MQ2 sensors', 'ESP32 + fuzzy logic', 'WiFi', 'Flask API', 'Supabase PostgreSQL', 'RandomForest forecast', 'Dashboard + Telegram'].map((s, i, a) => (
+          {['MQ135 · MQ7 · MQ2 sensors', 'ESP32 + fuzzy logic', 'WiFi', 'Flask API', 'Supabase PostgreSQL', 'Trend forecast + fuzzy rules', 'Dashboard + Telegram'].map((s, i, a) => (
             <span key={s} className="flex items-center gap-2">
               <span className="px-3 py-1.5 rounded-lg bg-slate-900/70 border border-slate-700">{s}</span>
               {i < a.length - 1 && <span className="text-indigo-400">→</span>}
@@ -258,18 +262,20 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <h3 className="font-semibold mt-6 mb-2 text-sm">Forecast model vs. base paper (IEEE Access 2025)</h3>
+        <h3 className="font-semibold mt-6 mb-2 text-sm">Forecast check on one hour of real device data</h3>
         <table className="w-full text-sm">
-          <thead><tr className="text-slate-400 text-left text-xs"><th className="pb-2">Metric</th><th>This project</th><th>Base paper (N-HiTS)</th></tr></thead>
+          <thead><tr className="text-slate-400 text-left text-xs"><th className="pb-2">Method (15 s ahead)</th><th>Accuracy</th><th>Danger F1</th></tr></thead>
           <tbody className="text-slate-200">
-            <tr><td className="py-1">Accuracy</td><td>{MODEL_RESULTS.accuracy}%</td><td>{PAPER_RESULTS.accuracy}%</td></tr>
-            <tr><td className="py-1">F1-score</td><td>{MODEL_RESULTS.f1}</td><td>{PAPER_RESULTS.f1}</td></tr>
-            <tr><td className="py-1">Danger F1-score</td><td>{MODEL_RESULTS.dangerF1}</td><td>{PAPER_RESULTS.dangerF1}</td></tr>
+            {FORECAST_EVAL.map((r) => (
+              <tr key={r.method}><td className="py-1">{r.method}</td><td>{r.accuracy}</td><td>{r.dangerF1}</td></tr>
+            ))}
           </tbody>
         </table>
         <p className="text-slate-500 text-xs mt-3">
-          This project's model is a RandomForest trained on a synthetic driving-cycle dataset; the paper used N-HiTS on real
-          PEMS data, so the numbers are indicative rather than a like-for-like benchmark.
+          The forecast projects each gas a few readings ahead along its recent trend and rates the result with the same fuzzy
+          rules as the device. Most of the session was Safe, so accuracy alone flatters every method; Danger F1 is the
+          informative column. The base paper (N-HiTS, real PEMS data) reports 83.3% accuracy and Danger F1 0.70 on a
+          different dataset, so the figures are not directly comparable.
         </p>
       </div>
 
