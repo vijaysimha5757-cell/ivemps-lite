@@ -60,9 +60,9 @@ const float RL_MQ2   = 5.0;
 // ---------- CALIBRATION CONSTANTS ----------
 // TODO: Fill these in after Day 4-5 calibration in clean air.
 // Ro = Rs measured in clean air / (Rs/Ro ratio in clean air from datasheet)
-float Ro_MQ135 = 104.08;  // calibrated 23 Sept, avg of 3 consistent runs
-float Ro_MQ7   = 0.58;    // calibrated 23 Sept, avg of 3 consistent runs
-float Ro_MQ2   = 0.79;    // calibrated 23 Sept, avg of 3 consistent runs
+float Ro_MQ135 = 50.27;  // calibrated 23 Sept, avg of 3 consistent runs
+float Ro_MQ7   = 0.70;    // calibrated 23 Sept, avg of 3 consistent runs
+float Ro_MQ2   = 1.52;    // calibrated 23 Sept, avg of 3 consistent runs
 
 // Datasheet curve constants for ppm = a * (Rs/Ro)^b  (log-log linear approx)
 // These are typical published values — refine after your own calibration if needed.
